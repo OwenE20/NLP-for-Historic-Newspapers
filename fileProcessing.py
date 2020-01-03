@@ -9,21 +9,22 @@ class fileProcess:
     import os
     import re 
     import shutil
+    import string
     from bs4 import BeautifulSoup
     from nltk.corpus import stopwords
-    from nltk.tokenize import PunktSentenceTokenizer
-    from nltk.stem import PorterStemmer
-    from nltk.corpus import state_union
+    from nltk.stem import WordNetLemmatizer
+    import nltk
+    import pandas as pd
     
 
     def __init__(self,root_dir,target_dir,news_paper):
         self.root = root_dir
         self.target = target_dir
         self.paperName = news_paper
-        df_strings = pd.DataFrame(index = ["Dates"], columns = ["TextBlockList"])
-        train_text = self.state_union.raw("2006-GWBush.txt")
-        self.custom_tokenizer = self.PunktSentenceTokenizer(train_text)
+        self.stopset = set(self.stopwords.words("english"))
         
+        self.lemmatizer = self.WordNetLemmatizer()
+      
     
     def walkAndProcess(self):
         dates = self.re.compile(r'\d{2,4}')
@@ -44,8 +45,8 @@ class fileProcess:
     """
     def parse_xml(self,filename):
     
-        #date = self.re.compile(r'\d{7,9}')
-        #index = date.findall(filename)
+        date = self.re.compile(r'\d{7,9}')
+        index = date.findall(filename)
         blockList = []
     
         with open(filename) as markupraw:
@@ -59,41 +60,40 @@ class fileProcess:
                         if(string['CONTENT'] != None):
                             current_block += " " + string['CONTENT']
             blockList.append(current_block)
-        return blockList
+        return (blockList,index)
     
 
 
     """
     NOT FULL PREPROCESSING, JUST PREPARING TEXT FOR BETTER STORAGE
     RETAINING AS MUCH INFO AS POSSIBLE TO EXPAND PROCESSING OPPORTUNITIES
+    
+    parameter list1 is an unfiltered list of parsed text
+    filtered text is stored in list2
+    
     """
-    def cleanList(self,list1):
-        for i,x in enumerate(list1):
-            if(len(str(x)) == None or len(str(x)) == 0):
-                list1.remove(x)
-        stop_words = set(self.stopwords.words("english"))
+    def cleanList(self,list1,list2):
+        for index, st in enumerate(list1):
+            temp_list = []
+            for word in self.nltk.tokenize.word_tokenize(st):
+                if(word.isalpha()):
+                    if(word not in self.stopset and len(word) > 3):
+                        good_word = self.lemmatizer.lemmatize(word.lower())
+                        temp_list.append(good_word)
+            if(len(temp_list) > 25):
+                list2.append(temp_list)
+            
+            
+
+    def move_to_df(self,files):
+        text_list= []
+        date_list = []
+        for file in files:
+            text, date = parse_xml(file)
+            text_list.append(text)
+            date_list.append(date)
+        self.pd.DataFrame()
         
-        temp_sent = ""
-        for i,x in enumerate(list1):
-            words = self.custom_tokenizer.tokenize(x)
-            words = str([w for w in words if not w in stop_words]).strip("[]")
-            words = words.lower()
-            
-                    
-            
-            
-            
-            
-
- 
-
-
-
-import pandas as pd
-
-
-
-print(list1)
 
 
 
@@ -105,7 +105,12 @@ name = "D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml"
 fp = fileProcess(root_dir,target_dir, "CorGaz")
 
 
+
 list1 = fp.parse_xml(name)
-fp.cleanList(list1)
+"""
+list2 = []
+fp.cleanList(list1,list2)
+pd.Series()
+"""
 
 
