@@ -22,7 +22,6 @@ class fileProcess:
         self.target = target_dir
         self.paperName = news_paper
         self.stopset = set(self.stopwords.words("english"))
-        
         self.lemmatizer = self.WordNetLemmatizer()
       
     
@@ -46,7 +45,7 @@ class fileProcess:
     def parse_xml(self,filename):
     
         date = self.re.compile(r'\d{7,9}')
-        index = date.findall(filename)
+        index = date.findall(filename)[0]
         blockList = []
     
         with open(filename) as markupraw:
@@ -60,6 +59,7 @@ class fileProcess:
                         if(string['CONTENT'] != None):
                             current_block += " " + string['CONTENT']
             blockList.append(current_block)
+    
         return (blockList,index)
     
 
@@ -86,13 +86,17 @@ class fileProcess:
             
 
     def move_to_df(self,files):
-        text_list= []
-        date_list = []
+        temp_dict = {}
         for file in files:
-            text, date = parse_xml(file)
-            text_list.append(text)
-            date_list.append(date)
-        self.pd.DataFrame()
+            temp_text = []
+            text, date = self.parse_xml(file)
+            self.cleanList(text, temp_text)
+            temp_dict[str(date)] = [temp_text]
+        df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
+        df.index = self.pd.to_datetime(df.index)
+        print(type(df.index))
+        return df
+        
         
 
 
@@ -100,17 +104,14 @@ class fileProcess:
 root_dir = r"D:\SeniorProject\testDir"
 target_dir = r"D:\SeniorProject\CorGazReorganized"
 news_name = "CorGaz" 
-name = "D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml"
+
+files = ["D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml","D:\SeniorProject\CorGazReorganized\CorGaz18990922.xml"]
+
+
 
 fp = fileProcess(root_dir,target_dir, "CorGaz")
+df = fp.move_to_df(files)
 
 
-
-list1 = fp.parse_xml(name)
-"""
-list2 = []
-fp.cleanList(list1,list2)
-pd.Series()
-"""
 
 
