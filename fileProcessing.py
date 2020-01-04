@@ -74,6 +74,7 @@ class fileProcess:
     """
     def cleanList(self,list1,list2):
         for index, st in enumerate(list1):
+            clean_string = ""
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
                 if(word.isalpha()):
@@ -81,7 +82,9 @@ class fileProcess:
                         good_word = self.lemmatizer.lemmatize(word.lower())
                         temp_list.append(good_word)
             if(len(temp_list) > 25):
-                list2.append(temp_list)
+                for word in temp_list:
+                    clean_string += " " + word
+                list2.append(clean_string)
             
             
 
@@ -94,23 +97,10 @@ class fileProcess:
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
-        print(type(df.index))
         return df
         
         
 
-
-
-root_dir = r"D:\SeniorProject\testDir"
-target_dir = r"D:\SeniorProject\CorGazReorganized"
-news_name = "CorGaz" 
-
-files = ["D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml","D:\SeniorProject\CorGazReorganized\CorGaz18990922.xml"]
-
-
-
-fp = fileProcess(root_dir,target_dir, "CorGaz")
-df = fp.move_to_df(files)
 
 
 
