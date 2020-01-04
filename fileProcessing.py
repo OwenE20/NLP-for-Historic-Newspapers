@@ -34,7 +34,7 @@ class fileProcess:
             if(len(files) > 1 and files != None):
                 date_list = dates.findall(self.os.path.join(root,files[1]))
                 newPathName = date_list[0] + date_list[1] + date_list[2] + ".xml"
-                newRoot = target_dir + "/" + self.paperName + newPathName
+                newRoot = self.target + "/" + self.paperName + newPathName
                 self.shutil.move(self.os.path.join(root,files[1]), newRoot)
               
             
@@ -43,7 +43,7 @@ class fileProcess:
     TODO: RETURN EMBEDDED DATE TOO, PARSE TOUPLE IN PROCESS METHOD
     """
     def parse_xml(self,filename):
-    
+
         date = self.re.compile(r'\d{7,9}')
         index = date.findall(filename)[0]
         blockList = []
@@ -100,8 +100,8 @@ class fileProcess:
         return df
         
         
-
-
+    def getTarget(self):
+        return self.target
 
 
 
