@@ -15,6 +15,7 @@ class fileProcess:
     from nltk.stem import WordNetLemmatizer
     import nltk
     import pandas as pd
+    from spellchecker import SpellChecker
     
 
     def __init__(self,root_dir,target_dir,news_paper):
@@ -23,6 +24,8 @@ class fileProcess:
         self.paperName = news_paper
         self.stopset = set(self.stopwords.words("english"))
         self.lemmatizer = self.WordNetLemmatizer()
+        self.spell = self.SpellChecker()
+        #IF PERFORMANCE IS SUBPAR WITH SPELL CHECK, FIND ERA-SPECIFIC CORPUS TO GENERATE WORD FREQUENCIES 
       
     
     def walkAndProcess(self):
@@ -78,9 +81,15 @@ class fileProcess:
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
                 if(word.isalpha()):
-                    if(word not in self.stopset and len(word) > 3):
-                        good_word = self.lemmatizer.lemmatize(word.lower())
+                    corrected_word = word
+                    if(word in self.spell.unknown(word)):
+                        corrected_word = self.spell.correction(word)
+                        if(correct_word in self.spell.unknown(correct_word)):
+                            correct_word = "n"
+                    if(corrected_word not in self.stopset and len(word) > 3):
+                        good_word = self.lemmatizer.lemmatize(corrected_word.lower())
                         temp_list.append(good_word)
+                    
             if(len(temp_list) > 25):
                 for word in temp_list:
                     clean_string += " " + word
