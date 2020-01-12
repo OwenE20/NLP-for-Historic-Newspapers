@@ -6,15 +6,16 @@ class fileAnalysis:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.cluster import KMeans
     import matplotlib.pyplot as plt
+    import numpy as np
+    from sklearn.decomposition import TruncatedSVD
     
     import os
     
-    def __init__(self , fileprocess):
+    def __init__(self, fileprocess):
         self.fp = fileprocess
-        self.corpus_document = []
-
-        
-    
+        self.corpus = self.buildCorpus()
+        self.tfidfVec()
+       
     def buildCorpus(self):
         fileList = []
         for file in self.listdir(fp.target):
@@ -26,12 +27,18 @@ class fileAnalysis:
                 corpus.append(element)
         return corpus
      
-        
-   
-    def kmeans_model(self,corpus,clusters_range):
+    """
+    CRITICAL FOR LATER
+    THE KMEANS WILL ONLY WORK IF APPLIED TO DIFFERENT DATA
+    RANDOMIZE ARTICLE SELECTION IN ACTUAL RUNTHROUGH
+    """
+    
+    def tfidfVec(self):
         self.tfidf_vectorizer = self.TfidfVectorizer()
-        self.tfidf = self.tfidf_vectorizer.fit_transform(corpus[:100])
+        self.tfidf = self.tfidf_vectorizer.fit_transform(self.corpus[:100])
 
+   
+    def kmeans_model(self, clusters_range):
         kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.tfidf) for i in range(1,clusters_range)]
         score = [kmeans[i].fit(self.tfidf).score(self.tfidf) for i in range(len(kmeans))]
         
@@ -41,27 +48,30 @@ class fileAnalysis:
         self.plt.title('Elbow Method')
         self.plt.show()
         
-        true_clusters = input("elbow point")
-        print(true_clusters)
-        k_means = self.KMeans(n_clusters = int(true_clusters), algorithm = "full").fit(self.tfidf)
+        self.true_clusters = int(input("elbow point"))
+        k_means = self.KMeans(n_clusters = self.true_clusters, algorithm = "full").fit(self.tfidf)
         return k_means
     
     def getDescriptors(self,kmeans):
         print("Top terms per cluster:")
         order_centroids = kmeans.cluster_centers_.argsort()[:, ::-1]
         terms = self.tfidf_vectorizer.get_feature_names()
-        for i in range(2):
+        for i in range(self.true_clusters):
             print("Cluster %d:" % i),
             for ind in order_centroids[i, :10]:
                 print(' %s' % terms[ind]),
                 
-    """
-    def graphPCA(self,kmeans)
-    """
-           
+    def getPCA(self,kmeans):
+        svd = self.TruncatedSVD()
+        svd_points = svd.fit_transform(self.tfidf.toarray())
+        kmeans = self.KMeans(n_clusters= self.true_clusters, max_iter=600, algorithm = 'full')
+        fitted = kmeans.fit(svd_points)
+        prediction = kmeans.predict(svd_points)
         
-        
-        
+        self.plt.scatter(svd_points[:, 0], svd_points[:, 1], c=prediction, s=50, cmap='viridis')
+        centers = fitted.cluster_centers_
+        self.plt.scatter(centers[:, 0], centers[:, 1],c='black', s=300, alpha=0.6);
+        self.plt.show()
     
 """
 weighted = TfidfVectorizer().fit_transform(df.iat[0,0])
@@ -84,11 +94,9 @@ files = ["D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml","D:\SeniorProje
 
 fp = fileProcess(root_dir,target_dir, "CorGaz")
 fa = fileAnalysis(fp)
-cor = fa.buildCorpus()
-kmeans = fa.kmeans_model(cor,30)
+kmeans = fa.kmeans_model(20)
 fa.getDescriptors(kmeans)
-
-
+fa.getPCA(kmeans)
 
 
 

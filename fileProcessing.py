@@ -41,10 +41,6 @@ class fileProcess:
                 self.shutil.move(self.os.path.join(root,files[1]), newRoot)
               
             
-            
-    """
-    TODO: RETURN EMBEDDED DATE TOO, PARSE TOUPLE IN PROCESS METHOD
-    """
     def parse_xml(self,filename):
 
         date = self.re.compile(r'\d{7,9}')
@@ -84,8 +80,9 @@ class fileProcess:
                     corrected_word = word
                     if(word in self.spell.unknown(word)):
                         corrected_word = self.spell.correction(word)
-                        if(correct_word in self.spell.unknown(correct_word)):
-                            correct_word = "n"
+                        if(corrected_word in self.spell.unknown(corrected_word)):
+                            #This runs if the word is essentially nonsense: best to get rid of it
+                            corrected_word = "n"
                     if(corrected_word not in self.stopset and len(word) > 3):
                         good_word = self.lemmatizer.lemmatize(corrected_word.lower())
                         temp_list.append(good_word)
