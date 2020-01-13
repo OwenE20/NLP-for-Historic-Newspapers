@@ -72,7 +72,18 @@ class fileAnalysis:
         centers = fitted.cluster_centers_
         self.plt.scatter(centers[:, 0], centers[:, 1],c='black', s=300, alpha=0.6);
         self.plt.show()
-    
+        
+        
+    def generateDF(self):
+        self.df = df.rename(columns = {0:"articles"})
+        self.df["num_articles"] =self.pd.Series([len(self.df["articles"][i]) for i in range(0,len(self.df["articles"]))], index = self.df.index)
+        for clusters in true_clusters:
+            frequencies = []
+            for index,row in self.df.iterrows():
+                frequency = 0
+                for article in self.df.at[index,"articles"]:
+                    if(kmeans.predict(article))
+                
 """
 weighted = TfidfVectorizer().fit_transform(df.iat[0,0])
 k = KMeans(n_clusters = 4).fit(weighted)
@@ -83,6 +94,7 @@ terms = weighted.
 """
 
 from fileProcessing import fileProcess
+
 
 root_dir = r"D:\SeniorProject\testDir"
 target_dir = r"D:\SeniorProject\CorGazReorganized"
@@ -97,6 +109,4 @@ fa = fileAnalysis(fp)
 kmeans = fa.kmeans_model(20)
 fa.getDescriptors(kmeans)
 fa.getPCA(kmeans)
-
-
 
