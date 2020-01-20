@@ -71,43 +71,42 @@ class fileProcess:
     filtered text is stored in list2
     
     """
-    def cleanList(self,list1,list2):
+    def cleanList(self,list1):
+        list2 = []
         for index, st in enumerate(list1):
             clean_string = ""
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
                 if(word.isalpha()):
-                    corrected_word = word
-                    if(word in self.spell.unknown(word)):
-                        corrected_word = self.spell.correction(word)
-                        if(corrected_word in self.spell.unknown(corrected_word)):
-                            #This runs if the word is essentially nonsense: best to get rid of it
-                            corrected_word = "n"
-                    if(corrected_word not in self.stopset and len(word) > 3):
-                        good_word = self.lemmatizer.lemmatize(corrected_word.lower())
-                        temp_list.append(good_word)
-                    
+                   corrected = ""
+                   if(word in self.spell.unknown([word])):
+                       corrected = self.spell.correction(word)
+                       print(corrected)
+                       if(word == corrected):
+                           corrected = "n"
+                           print(corrected)
+                   else:
+                       corrected = word
+                   if(corrected not in self.stopset and len(corrected) > 3):
+                       corrected = self.lemmatizer.lemmatize(corrected.lower())
+                       temp_list.append(corrected)
             if(len(temp_list) > 25):
-                for word in temp_list:
-                    clean_string += " " + word
+                clean_string = " ".join(temp_list)
                 list2.append(clean_string)
+        return list2
             
-            
+    
 
     def move_to_df(self,files):
         temp_dict = {}
         for file in files:
-            temp_text = []
             text, date = self.parse_xml(file)
-            self.cleanList(text, temp_text)
+            temp_text = self.cleanList(text)
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
         return df
         
         
-    def getTarget(self):
-        return self.target
-
-
+    
 
