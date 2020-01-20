@@ -8,17 +8,43 @@ class fileAnalysis:
     import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.decomposition import TruncatedSVD
-    
+    from sklearn.naive_bayes import MultinomialNB
+    #from sklearn.feature_extraction import CountVectorizer
+    from sklearn.model_selection import train_test_split
     import os
+    import pickle
     
-    def __init__(self, fileprocess):
+    """
+    AFTER EVERYTHING IS TESTED AND WORKING, EVERY PARAMATER SHOULD BE AN ATTRIBUTE
+    ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
+    """
+    
+    def __init__(self, fileprocess, isCorpusBuilt = False):
+        
+        corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\corpus.pickle"
+        corpus_outfile = open(corpus_filename,'wb')
+        if(isCorpusBuilt == False):
+            print("---- BUILDING CORPUS ----")
+            self.corpus = self.buildCorpus()
+            print(len(self.corpus))
+            self.pickle.dump(self.corpus,corpus_outfile)
+            corpus_outfile.close()
+        else:
+            corpus_infile = open(corpus_filename,"rb")
+            print("----LOADING CORPUS---")
+            self.corpus = self.pickle.load(corpus_infile)
+            corpus_infile.close()
+            print(self.corpus[0])
+            
         self.fp = fileprocess
-        self.corpus = self.buildCorpus()
         self.tfidfVec()
+        self.mnb = self.MultinomialNB()
+        #self.cv = self.CountVectorizer()
        
+    #Make corpus a sample
     def buildCorpus(self):
         fileList = []
-        for file in self.listdir(fp.target):
+        for file in self.listdir(fp.target)[:1]:
             fileList.append(self.os.path.join(fp.target,file))
         self.df = fp.move_to_df(fileList)
         corpus = []
@@ -35,10 +61,11 @@ class fileAnalysis:
     
     def tfidfVec(self):
         self.tfidf_vectorizer = self.TfidfVectorizer()
-        self.tfidf = self.tfidf_vectorizer.fit_transform(self.corpus[:100])
+        self.tfidf = self.tfidf_vectorizer.fit_transform(self.corpus[:5])
 
    
     def kmeans_model(self, clusters_range):
+        """
         kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.tfidf) for i in range(1,clusters_range)]
         score = [kmeans[i].fit(self.tfidf).score(self.tfidf) for i in range(len(kmeans))]
         
@@ -47,9 +74,10 @@ class fileAnalysis:
         self.plt.ylabel('Score')
         self.plt.title('Elbow Method')
         self.plt.show()
-        
-        self.true_clusters = int(input("elbow point"))
-        k_means = self.KMeans(n_clusters = self.true_clusters, algorithm = "full").fit(self.tfidf)
+        """
+        #self.true_clusters = int(input("elbow point"))
+        self.true_clusters = clusters_range
+        k_means = self.KMeans(n_clusters = 2, algorithm = "full").fit(self.tfidf)
         return k_means
     
     def getDescriptors(self,kmeans):
@@ -73,25 +101,52 @@ class fileAnalysis:
         self.plt.scatter(centers[:, 0], centers[:, 1],c='black', s=300, alpha=0.6);
         self.plt.show()
         
-        
-    def generateDF(self):
-        self.df = df.rename(columns = {0:"articles"})
+      
+    """
+    THIS WILL BE USEFUL TO GENERATE DATA AFTER BAYES MODEL IS TRAINED
+     
+     
+    def generateDF(self,kmeans):
+        self.df = self.df.rename(columns = {0:"articles"})
         self.df["num_articles"] =self.pd.Series([len(self.df["articles"][i]) for i in range(0,len(self.df["articles"]))], index = self.df.index)
-        for clusters in true_clusters:
+        for clusters in range(self.true_clusters):
             frequencies = []
             for index,row in self.df.iterrows():
                 frequency = 0
                 for article in self.df.at[index,"articles"]:
-                    if(kmeans.predict(article))
+                    if(kmeans.predict(self.tfidf_vectorizer.transform([article])[0]) == clusters):
+                        frequency += 1
+                frequencies.append(frequency)
+            self.df["cluster " + str(clusters)] = self.pd.Series(frequency, index = self.df.index)
+    """
+           
+    """
+    NEED TO HAVE A RANDOM SAMPLE OF DOCUMENTS
+    """
+    def prep_for_bayes(self, kmeans):
+        training_dict = {}
+        for document in self.corpus[:6]:
+            cluster = kmeans.predict(self.tfidf_vectorizer.transform([document])[0])
+            training_dict[document] = (cluster)
+        class_associations = self.pd.DataFrame.from_dict(training_dict, orient = "index", columns = ['articles'])
+        print("new")
+        return class_associations
+        
+  
+    def bayes_model(self,kmeans):
+        #train_x = self.randomize_df(self.prep_for_bayes(kmeans))
+        #text_x = self.randomize_df(self.prep_for_bayes(kmeans))
+        #train_y = self.randomize_df(self.prep_for_bayes(kmeans))
+        #text_y = self.randomize_df(self.prep_for_bayes(kmeans))
+        train_x, test_x, train_y, test_y = self.train_test_split(self.prep_for_bayes(kmeans).index,self.prep_for_bayes()["0"])
+        print(train_x,train_y,test_y,test_y)
+        
+    """  
+     def randomize_df(self,series,sample_size):
+        return series.sample(n = sample_size, random_state = 1)
+    """
                 
-"""
-weighted = TfidfVectorizer().fit_transform(df.iat[0,0])
-k = KMeans(n_clusters = 4).fit(weighted)
 
-clusters = pd.DataFrame(k.cluster_centers_)
-
-terms = weighted.
-"""
 
 from fileProcessing import fileProcess
 
@@ -102,11 +157,27 @@ news_name = "CorGaz"
 
 files = ["D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml","D:\SeniorProject\CorGazReorganized\CorGaz18990922.xml"]
 
-
-
 fp = fileProcess(root_dir,target_dir, "CorGaz")
-fa = fileAnalysis(fp)
-kmeans = fa.kmeans_model(20)
-fa.getDescriptors(kmeans)
-fa.getPCA(kmeans)
+fa = fileAnalysis(fp,isCorpusBuilt = False)
+"""
+
+text,date = fp.parse_xml(files[1])
+list2 = fp.cleanList(text)
+
+"""
+
+kmeans = fa.kmeans_model(10)
+pd = fa.prep_for_bayes(kmeans)
+
+
+#%%
+
+
+
+
+#fa.generateDF(kmeans)
+#df = fa.df
+
+#fa.getDescriptors(kmeans)
+#fa.getPCA(kmeans)
 

@@ -81,10 +81,8 @@ class fileProcess:
                    corrected = ""
                    if(word in self.spell.unknown([word])):
                        corrected = self.spell.correction(word)
-                       print(corrected)
                        if(word == corrected):
                            corrected = "n"
-                           print(corrected)
                    else:
                        corrected = word
                    if(corrected not in self.stopset and len(corrected) > 3):
@@ -92,7 +90,9 @@ class fileProcess:
                        temp_list.append(corrected)
             if(len(temp_list) > 25):
                 clean_string = " ".join(temp_list)
+                print("cleaned a string")
                 list2.append(clean_string)
+            
         return list2
             
     
