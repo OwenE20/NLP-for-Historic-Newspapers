@@ -16,7 +16,7 @@ class fileProcess:
     import nltk
     import pandas as pd
     from spellchecker import SpellChecker
-    
+    import random
 
     def __init__(self,root_dir,target_dir,news_paper):
         self.root = root_dir
@@ -25,6 +25,7 @@ class fileProcess:
         self.stopset = set(self.stopwords.words("english"))
         self.lemmatizer = self.WordNetLemmatizer()
         self.spell = self.SpellChecker()
+        
         #IF PERFORMANCE IS SUBPAR WITH SPELL CHECK, FIND ERA-SPECIFIC CORPUS TO GENERATE WORD FREQUENCIES 
       
     
@@ -97,11 +98,14 @@ class fileProcess:
             
     
 
-    def move_to_df(self,files):
+    def move_to_df(self,files,sample_size):
         temp_dict = {}
-        for file in files:
+        #takes a random sample of files
+        random_files = self.random.sample(files,sample_size)
+        for file in random_files:
             text, date = self.parse_xml(file)
-            temp_text = self.cleanList(text)
+            #random sample within the 
+            temp_text = self.cleanList(self.random.sample(text, (3 * len(text)//5)))
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
