@@ -21,9 +21,12 @@ class fileAnalysis:
     ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
     """
     
-    def __init__(self, fileprocess,clusters,sample_size = 2, isCorpusBuilt = False, isKBuilt = False):
+    def __init__(self, fileprocess,max_clusters,sample_size, isCorpusBuilt = False, isKBuilt = False):
         
-        corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\corpus.pickle"
+        
+        self.fp = fileprocess
+        corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + self.fp.paperName  + "\corpus" + ".pickle"
+        self.df_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + self.fp.paperName  + "\df" + ".pickle"
         
         
         if(isCorpusBuilt == False):
@@ -37,21 +40,28 @@ class fileAnalysis:
                 print("----LOADING CORPUS---")
                 self.corpus = self.pickle.load(file)
                 file.close()
-                
-                
-        
-        self.fp = fileprocess
+            with open(self.df_filename, "rb") as file:
+                print("----LOADING DF---")
+                self.df = self.pickle.load(file)
+                file.close()
+       
         self.tfidfVec()
         self.mnb = self.MultinomialNB()
-        self.kmeans_model(clusters,isKBuilt)
+        self.kmeans_model(max_clusters,isKBuilt)
         self.cv = self.CountVectorizer()
        
     #sample_size is how many files
     def buildCorpus(self,sample_size):
         fileList = []
-        for file in self.listdir(fp.target):
-            fileList.append(self.os.path.join(fp.target,file))
-        self.df = fp.move_to_df(fileList,sample_size)
+        for file in self.listdir(self.fp.target):
+            fileList.append(self.os.path.join(self.fp.target,file))
+            
+        
+        self.df = self.fp.move_to_df(fileList,sample_size)
+        with open(self.df_filename,'wb') as file:
+                print("---- BUILDING DF ----")
+                self.pickle.dump(self.df,file)
+                file.close()
         corpus = []
         for index, data in self.df.iterrows():
             for index, element in enumerate(data[0]):
@@ -67,6 +77,11 @@ class fileAnalysis:
     def tfidfVec(self):
         self.tfidf_vectorizer = self.TfidfVectorizer()
         self.tfidf = self.tfidf_vectorizer.fit_transform(self.corpus)
+        size = len(self.tfidf.toarray()//2)
+        self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.corpus, size))
+        self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.corpus, size))
+        
+        
         self.tf_array = self.tfidf.toarray()
         
 
@@ -77,13 +92,9 @@ class fileAnalysis:
         kmeans_file = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\kmeans_model.pickle"
         
         if(built == False):
-            sample_size =  len(self.tf_array//2)
-            train_sample = self.random.sample(self.tf_array,sample_size)
-            score_sample = self.random.sample(self.tf_array, sample_size)
-            
         
-            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(train_sample) for i in range(1,clusters_range)]
-            score = [kmeans[i].fit(train_sample).score(score_sample) for i in range(len(kmeans))]
+            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.train_sample) for i in range(1,clusters_range)]
+            score = [kmeans[i].fit(self.train_sample).score(self.score_sample) for i in range(len(kmeans))]
         
             self.plt.plot(range(1,clusters_range), score)
             self.plt.xlabel('Number of Clusters')
@@ -92,6 +103,8 @@ class fileAnalysis:
             self.plt.show()
             self.true_clusters = int(input("elbow point"))
             self.kmeans = self.KMeans(n_clusters = self.true_clusters, algorithm = "full").fit(self.tfidf)
+            self.getDescriptors()
+            self.getPCA()
             
             with open(kmeans_file,'wb') as file:
                 print("---- BUILDING KMEANS MODEL ----")
@@ -103,8 +116,7 @@ class fileAnalysis:
                 self.kmeans = self.pickle.load(file)
                 file.close()
                 
-        self.getDescriptors()
-        self.getPCA()
+        
         
         
        
@@ -177,26 +189,21 @@ class fileAnalysis:
         self.mnb = self.mnb.fit(train_x_counts,train_y)
         
         self.test_x_counts = self.cv.fit_transform(test_x)
-        print(test_x_counts)
-        predicted_x = self.mnb.predict(test_x_counts)
-        print(predicted_x)
-        score = self.metrics.accuracy_score(test_y,predicted_y)
+        predicted_x = self.mnb.predict(self.test_x_counts)
+        score = self.metrics.accuracy_score(test_y,predicted_x)
         print(score)
 
+
+
 from fileProcessing import fileProcess
-root_dir = r"D:\SeniorProject\testDir"
-target_dir = r"D:\SeniorProject\CorGazReorganized"
-news_name = "CorGaz" 
 
-files = ["D:\SeniorProject\CorGazReorganized/CorGaz18991027.xml","D:\SeniorProject\CorGazReorganized\CorGaz18990922.xml"]
+root_FC = r"D:\SeniorProject\FakeCorGaz"
+target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
+fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
+fp_FC.walkAndProcess()
+
+fa_FC = fileAnalysis(fp_FC, 2, 10,isCorpusBuilt = False, isKBuilt = False)
 
 
-"""
 
-text,date = fp.parse_xml(files[1])
-list2 = fp.cleanList(text)
-
-"""
-fp = fileProcess(root_dir,target_dir, "CorGaz")
-fa = fileAnalysis(fp,clusters = 10,sample_size = 10,isCorpusBuilt = True, isKBuilt = False)
 

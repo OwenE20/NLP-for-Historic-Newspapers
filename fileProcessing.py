@@ -37,6 +37,7 @@ class fileProcess:
         for root,dirs,files in self.os.walk(self.root):
             if(len(files) > 1 and files != None):
                 date_list = dates.findall(self.os.path.join(root,files[1]))
+                print(date_list)
                 newPathName = date_list[0] + date_list[1] + date_list[2] + ".xml"
                 newRoot = self.target + "/" + self.paperName + newPathName
                 self.shutil.move(self.os.path.join(root,files[1]), newRoot)
@@ -104,13 +105,13 @@ class fileProcess:
         random_files = self.random.sample(files,sample_size)
         for file in random_files:
             text, date = self.parse_xml(file)
-            #random sample within the 
-            temp_text = self.cleanList(self.random.sample(text, (3 * len(text)//5)))
+            #random sample within the documents: 3/5ths of the documents currently
+            size = (3 * len(text)//5)
+            temp_text = self.cleanList(self.random.sample(text,size))
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
         return df
         
         
-    
 
