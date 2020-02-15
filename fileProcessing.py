@@ -9,22 +9,29 @@ class fileProcess:
     import os
     import re 
     import shutil
-    import string
+    from symspellpy import SymSpell, Verbosity
     from bs4 import BeautifulSoup
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
     import nltk
     import pandas as pd
-    from spellchecker import SpellChecker
+
     import random
 
     def __init__(self,root_dir,target_dir,news_paper):
+
+        symSpell_dictionary = r"C:\Users\Mikes_Surface2\Anaconda3\Lib\site-packages\symspellpy\frequency_dictionary_en_82_765.txt"
+
+        self.spellchecker = self.SymSpell()
+        self.spellchecker.load_dictionary(symSpell_dictionary,0,1)
+        self.word_set = self.spellchecker._words.keys()
+
         self.root = root_dir
         self.target = target_dir
         self.paperName = news_paper
         self.stopset = set(self.stopwords.words("english"))
         self.lemmatizer = self.WordNetLemmatizer()
-        self.spell = self.SpellChecker()
+
         
         #IF PERFORMANCE IS SUBPAR WITH SPELL CHECK, FIND ERA-SPECIFIC CORPUS TO GENERATE WORD FREQUENCIES 
       
@@ -79,14 +86,21 @@ class fileProcess:
             clean_string = ""
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
+                corrected = ""
                 if(word.isalpha()):
-                   corrected = ""
-                   if(word in self.spell.unknown([word])):
-                       corrected = self.spell.correction(word)
-                       if(word == corrected):
-                           corrected = "n"
+                   suggestions = self.spellchecker.lookup(word, self.Verbosity.CLOSEST, max_edit_distance=2,include_unknown=True)
+
+                   if(len(suggestions) > 1):
+                       corrected = suggestions[0].term
+
                    else:
-                       corrected = word
+                       print(word)
+                       if(word in self.word_set or self.nltk.pos_tag([word])[0][1] == "NN" or self.nltk.pos_tag([word])[0][1] == "NNP"):
+                            print(word)
+                            corrected = word
+                       else:
+                            corrected = "n"
+
                    if(corrected not in self.stopset and len(corrected) > 3):
                        corrected = self.lemmatizer.lemmatize(corrected.lower())
                        temp_list.append(corrected)
@@ -114,4 +128,12 @@ class fileProcess:
         return df
         
         
+
+file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
+root_FC = r"D:\SeniorProject\FakeCorGaz"
+target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
+fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
+list1 = fp_FC.parse_xml(file)[0]
+clean = fp_FC.cleanList(list1)
+print(clean)
 
