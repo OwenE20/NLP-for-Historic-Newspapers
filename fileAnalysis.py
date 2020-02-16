@@ -145,6 +145,23 @@ class fileAnalysis:
         return self.mnb.predict(predict_array)
 
 
+    
+    def generateDF(self, corpus):
+        generated_df = corpus.rename(columns = {0: "articles"})
+        generated_df["num_articles"] = self.pd.Series([len(generated_df["articles"][i]) for i in range(0, len(generated_df["articles"]))], index = generated_df.index)
+        for cluster in range(0,self.true_clusters):
+            frequencies = []
+            for index, row in generated_df.iterrows():
+                frequency = 0
+                for article in generated_df.at[index,"articles"]:
+                    if(self.bayes_classify([[article][0]]) == cluster):
+                        frequency += 1
+                frequencies.append(frequency)
+            generated_df["clusters" + str(cluster)] = self.pd.Series(data = frequencies, index = generated_df.index)
+
+        return generated_df
+    
+           
 
 
 from fileProcessing import fileProcess
