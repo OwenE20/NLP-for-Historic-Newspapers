@@ -21,53 +21,15 @@ class fileAnalysis:
     ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
     """
     
-    def __init__(self, fileprocess,max_clusters,sample_size, isCorpusBuilt = False, isKBuilt = False):
-        
-        
-        self.fp = fileprocess
-        corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + self.fp.paperName  + "\corpus" + ".pickle"
-        self.df_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + self.fp.paperName  + "\df" + ".pickle"
-        
-        
-        if(isCorpusBuilt == False):
-            with open(corpus_filename,'wb') as file:
-                print("---- BUILDING CORPUS ----")
-                self.corpus = self.buildCorpus(sample_size)
-                self.pickle.dump(self.corpus,file)
-                file.close()
-        else:
-            with open(corpus_filename, "rb") as file:
-                print("----LOADING CORPUS---")
-                self.corpus = self.pickle.load(file)
-                file.close()
-            with open(self.df_filename, "rb") as file:
-                print("----LOADING DF---")
-                self.df = self.pickle.load(file)
-                file.close()
-       
+    def __init__(self,max_clusters, train_corpus, isKBuilt = False):
+
         self.tfidfVec()
         self.mnb = self.MultinomialNB()
         self.kmeans_model(max_clusters,isKBuilt)
         self.cv = self.CountVectorizer()
-       
-    #sample_size is how many files
-    def buildCorpus(self,sample_size):
-        fileList = []
-        for file in self.listdir(self.fp.target):
-            fileList.append(self.os.path.join(self.fp.target,file))
-            
-        
-        self.df = self.fp.move_to_df(fileList,sample_size)
-        with open(self.df_filename,'wb') as file:
-                print("---- BUILDING DF ----")
-                self.pickle.dump(self.df,file)
-                file.close()
-        corpus = []
-        for index, data in self.df.iterrows():
-            for index, element in enumerate(data[0]):
-                corpus.append(element)
-        return corpus
-     
+        self.training_corpus = train_corpus
+
+
     """
     CRITICAL FOR LATER
     THE KMEANS WILL ONLY WORK IF APPLIED TO DIFFERENT DATA
@@ -76,13 +38,13 @@ class fileAnalysis:
     
     def tfidfVec(self):
         self.tfidf_vectorizer = self.TfidfVectorizer()
-        self.tfidf = self.tfidf_vectorizer.fit_transform(self.corpus)
+        self.tfidf = self.tfidf_vectorizer.fit_transform(self.training_corpus)
         size = len(self.tfidf.toarray()//2)
-        self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.corpus, size))
-        self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.corpus, size))
-        
-        
+        self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
+        self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
+
         self.tf_array = self.tfidf.toarray()
+
         
 
    
@@ -116,10 +78,7 @@ class fileAnalysis:
                 self.kmeans = self.pickle.load(file)
                 file.close()
                 
-        
-        
-        
-       
+
     def getDescriptors(self):
         print("Top terms per cluster:")
         order_centroids = self.kmeans.cluster_centers_.argsort()[:, ::-1]
@@ -164,7 +123,7 @@ class fileAnalysis:
     """
     def prep_for_bayes(self):
         training_dict = {}
-        for document in self.corpus:
+        for document in self.training_corpus:
             cluster = self.kmeans.predict(self.tfidf_vectorizer.transform([document])[0])
             training_dict[document] = (cluster)
         class_associations = self.pd.DataFrame.from_dict(training_dict, orient = "index", columns = ['labels'])
@@ -193,17 +152,20 @@ class fileAnalysis:
         score = self.metrics.accuracy_score(test_y,predicted_x)
         print(score)
 
+    def bayes_classify(self, sentence_token):
+        predict_array = self.cv.fit_transform(sentence_token)
+        return self.mnb.predict(predict_array)
 
 
-from fileProcessing import fileProcess
 
+"""
 root_FC = r"D:\SeniorProject\FakeCorGaz"
 target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
 fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
 fp_FC.walkAndProcess()
 
 fa_FC = fileAnalysis(fp_FC, 2, 10,isCorpusBuilt = False, isKBuilt = False)
-
+"""
 
 
 

@@ -18,9 +18,10 @@ class fileProcess:
 
     import random
 
-    def __init__(self,root_dir,target_dir,news_paper):
+    def __init__(self,root_dir,target_dir,news_paper, sample_size, isCorpusBuilt = False):
 
         symSpell_dictionary = r"C:\Users\Mikes_Surface2\Anaconda3\Lib\site-packages\symspellpy\frequency_dictionary_en_82_765.txt"
+
 
         self.spellchecker = self.SymSpell()
         self.spellchecker.load_dictionary(symSpell_dictionary,0,1)
@@ -31,6 +32,25 @@ class fileProcess:
         self.paperName = news_paper
         self.stopset = set(self.stopwords.words("english"))
         self.lemmatizer = self.WordNetLemmatizer()
+
+        corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + news_paper + "\corpus" + ".pickle"
+        self.df_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + news_paper + "\df" + ".pickle"
+
+        if(isCorpusBuilt == False):
+            with open(corpus_filename,'wb') as file:
+                print("---- BUILDING CORPUS ----")
+                self.corpus = self.buildCorpus(sample_size)
+                self.pickle.dump(self.corpus,file)
+                file.close()
+        else:
+            with open(corpus_filename, "rb") as file:
+                print("----LOADING CORPUS---")
+                self.corpus = self.pickle.load(file)
+                file.close()
+            with open(self.df_filename, "rb") as file:
+                print("----LOADING DF---")
+                self.df = self.pickle.load(file)
+                file.close()
 
         
         #IF PERFORMANCE IS SUBPAR WITH SPELL CHECK, FIND ERA-SPECIFIC CORPUS TO GENERATE WORD FREQUENCIES 
@@ -110,6 +130,23 @@ class fileProcess:
                 list2.append(clean_string)
             
         return list2
+
+        # sample_size is how many files
+    def buildCorpus(self, sample_size):
+        fileList = []
+        for file in self.listdir(self.target):
+            fileList.append(self.os.path.join(self.target, file))
+
+            self.df = self.move_to_df(fileList, sample_size)
+        with open(self.df_filename, 'wb') as file:
+            print("---- BUILDING DF ----")
+            self.pickle.dump(self.df, file)
+            file.close()
+        corpus = []
+        for index, data in self.df.iterrows():
+            for index, element in enumerate(data[0]):
+                corpus.append(element)
+        return corpus
             
     
 
@@ -126,6 +163,8 @@ class fileProcess:
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
         return df
+
+
         
         
 

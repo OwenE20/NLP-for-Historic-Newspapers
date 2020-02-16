@@ -1,5 +1,8 @@
-from fileProcessing import fileProcess
-from fileAnalysis import fileAnalysis
+#from fileProcessing import fileProcess
+#from fileAnalysis import fileAnalysis
+
+
+
 
 
 """
@@ -19,28 +22,65 @@ target_RD = r"D:\SeniorProject\RightsDemReorganized"
 
 
 """
-Corpus Objects
-
-"""
-
-fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz")
-fp_RD = fileProcess(root_RD,target_RD, "RightsDem")
-
-"""
 RUN ONCE (RAN 2/13/20)
-
-"""
 fp_Cor.walkAndProcess()
 fp_RD.walkAndProcess()
 
 
 """
+
+"""
+For Training: took 5% from each dataset
+Run once for training sample
+Ran (2/15/2020)
+
+"""
+
+def random_training_set():
+    import os
+    import random
+    import shutil
+
+    #FIVE PERCENT OF EACH WILL SERVE FOR TRAINING
+
+    train_path = r"D:\SeniorProject\TrainingFiles"
+    five_percent_CD = .05 * len(os.listdir(target_Cor))
+    five_percent_RD = .05 * len(os.listdir(target_RD))
+
+    train_num = 0
+    while(train_num < five_percent_CD):
+        file = os.path.join(target_Cor,random.choice(os.listdir(target_Cor)))
+        shutil.move(file,train_path)
+        train_num += 1
+
+    train_num = 0
+    while (train_num < five_percent_RD):
+        file = os.path.join(target_RD, random.choice(os.listdir(target_RD)))
+        shutil.move(file, train_path)
+        train_num += 1
+
+
+
+"""
 FOR SAMPLING PURPOSES:
-COR GAZ: 730 issues
-RIGHTS DEM: 
+COR GAZ: 689 files 
+RIGHTS DEM: 1,264 files
 10% of each for corpus sample
 Random sample of both for training?
 """
+
+
+"""
+Corpus Objects
+
+"""
+
+#fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz")
+#fp_RD = fileProcess(root_RD,target_RD, "RightsDem")
+
+
+
+
 #CODE FOR CORPUS
 
 
