@@ -1,18 +1,4 @@
-#from fileProcessing import fileProcess
-#from fileAnalysis import fileAnalysis
 
-
-
-
-
-"""
-root_FC = r"D:\SeniorProject\FakeCorGaz"
-target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
-fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
-fp_FC.walkAndProcess();
-
-
-"""
 
 root_Cor = r"D:\SeniorProject\CorGaz"
 target_Cor = r"D:\SeniorProject\CorGazReorganized"
@@ -25,7 +11,6 @@ target_RD = r"D:\SeniorProject\RightsDemReorganized"
 RUN ONCE (RAN 2/13/20)
 fp_Cor.walkAndProcess()
 fp_RD.walkAndProcess()
-
 
 """
 
@@ -74,6 +59,8 @@ Random sample of both for training?
 Corpus Objects
 
 """
+
+
 
 #fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz")
 #fp_RD = fileProcess(root_RD,target_RD, "RightsDem")

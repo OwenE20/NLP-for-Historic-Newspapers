@@ -13,8 +13,10 @@ class fileProcess:
     from bs4 import BeautifulSoup
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
+    from spellchecker import SpellChecker
     import nltk
     import pandas as pd
+    import pickle
 
     import random
 
@@ -32,6 +34,7 @@ class fileProcess:
         self.paperName = news_paper
         self.stopset = set(self.stopwords.words("english"))
         self.lemmatizer = self.WordNetLemmatizer()
+        self.spell = self.SpellChecker()
 
         corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + news_paper + "\corpus" + ".pickle"
         self.df_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + news_paper + "\df" + ".pickle"
@@ -108,25 +111,23 @@ class fileProcess:
             for word in self.nltk.tokenize.word_tokenize(st):
                 corrected = ""
                 if(word.isalpha()):
-                   suggestions = self.spellchecker.lookup(word, self.Verbosity.CLOSEST, max_edit_distance=2,include_unknown=True)
+                   suggestions = self.spellchecker.lookup(word, self.Verbosity.CLOSEST,include_unknown=True)
 
                    if(len(suggestions) > 1):
                        corrected = suggestions[0].term
 
                    else:
-                       print(word)
-                       if(word in self.word_set or self.nltk.pos_tag([word])[0][1] == "NN" or self.nltk.pos_tag([word])[0][1] == "NNP"):
-                            print(word)
-                            corrected = word
+                       if(word in self.spell.unknown([word])):
+                           print(word)
+                           corrected = "n"
                        else:
-                            corrected = "n"
-
+                           corrected = word
                    if(corrected not in self.stopset and len(corrected) > 3):
                        corrected = self.lemmatizer.lemmatize(corrected.lower())
                        temp_list.append(corrected)
-            if(len(temp_list) > 25):
-                clean_string = " ".join(temp_list)
+            if(len(temp_list) > 20):
                 print("cleaned a string")
+                clean_string = " ".join(temp_list)
                 list2.append(clean_string)
             
         return list2
@@ -134,10 +135,10 @@ class fileProcess:
         # sample_size is how many files
     def buildCorpus(self, sample_size):
         fileList = []
-        for file in self.listdir(self.target):
+        for file in self.os.listdir(self.target):
             fileList.append(self.os.path.join(self.target, file))
-
-            self.df = self.move_to_df(fileList, sample_size)
+            
+        self.df = self.move_to_df(fileList, sample_size)
         with open(self.df_filename, 'wb') as file:
             print("---- BUILDING DF ----")
             self.pickle.dump(self.df, file)
@@ -156,9 +157,7 @@ class fileProcess:
         random_files = self.random.sample(files,sample_size)
         for file in random_files:
             text, date = self.parse_xml(file)
-            #random sample within the documents: 3/5ths of the documents currently
-            size = (3 * len(text)//5)
-            temp_text = self.cleanList(self.random.sample(text,size))
+            temp_text = self.cleanList(text)
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict,orient = 'index')
         df.index = self.pd.to_datetime(df.index)
@@ -168,11 +167,4 @@ class fileProcess:
         
         
 
-file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
-root_FC = r"D:\SeniorProject\FakeCorGaz"
-target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
-fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
-list1 = fp_FC.parse_xml(file)[0]
-clean = fp_FC.cleanList(list1)
-print(clean)
 

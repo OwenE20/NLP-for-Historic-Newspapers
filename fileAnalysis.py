@@ -23,11 +23,15 @@ class fileAnalysis:
     
     def __init__(self,max_clusters, train_corpus, isKBuilt = False):
 
+
+        
+        self.training_corpus = train_corpus
         self.tfidfVec()
         self.mnb = self.MultinomialNB()
         self.kmeans_model(max_clusters,isKBuilt)
+        self.true_clusters = self.kmeans.n_clusters
         self.cv = self.CountVectorizer()
-        self.training_corpus = train_corpus
+        self.bayes_model()
 
 
     """
@@ -37,8 +41,8 @@ class fileAnalysis:
     """
     
     def tfidfVec(self):
-        self.tfidf_vectorizer = self.TfidfVectorizer()
-        self.tfidf = self.tfidf_vectorizer.fit_transform(self.training_corpus)
+        self.tfidf_vectorizer = self.TfidfVectorizer().fit(self.training_corpus)
+        self.tfidf = self.tfidf_vectorizer.transform(self.training_corpus)
         size = len(self.tfidf.toarray()//2)
         self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
         self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
@@ -64,7 +68,7 @@ class fileAnalysis:
             self.plt.title('Elbow Method')
             self.plt.show()
             self.true_clusters = int(input("elbow point"))
-            self.kmeans = self.KMeans(n_clusters = self.true_clusters, algorithm = "full").fit(self.tfidf)
+            self.kmeans = self.KMeans(n_clusters = self.true_clusters, algorithm = "full",random_state = 0, init = 'random').fit(self.tfidf)
             self.getDescriptors()
             self.getPCA()
             
@@ -85,7 +89,7 @@ class fileAnalysis:
         terms = self.tfidf_vectorizer.get_feature_names()
         for i in range(self.true_clusters):
             print("Cluster %d:" % i),
-            for ind in order_centroids[i, :10]:
+            for ind in order_centroids[i, :20]:
                 print(' %s' % terms[ind]),
                 
     def getPCA(self):
@@ -100,32 +104,15 @@ class fileAnalysis:
         self.plt.show()
         
       
-    """
-    THIS WILL BE USEFUL TO GENERATE DATA AFTER BAYES MODEL IS TRAINED
-     
-     
-    def generateDF(self,kmeans):
-        self.df = self.df.rename(columns = {0:"articles"})
-        self.df["num_articles"] =self.pd.Series([len(self.df["articles"][i]) for i in range(0,len(self.df["articles"]))], index = self.df.index)
-        for clusters in range(self.true_clusters):
-            frequencies = []
-            for index,row in self.df.iterrows():
-                frequency = 0
-                for article in self.df.at[index,"articles"]:
-                    if(kmeans.predict(self.tfidf_vectorizer.transform([article])[0]) == clusters):
-                        frequency += 1
-                frequencies.append(frequency)
-            self.df["cluster " + str(clusters)] = self.pd.Series(frequency, index = self.df.index)
-    """
-           
+    
     """
     NEED TO HAVE A RANDOM SAMPLE OF DOCUMENTS
     """
     def prep_for_bayes(self):
         training_dict = {}
-        for document in self.training_corpus:
-            cluster = self.kmeans.predict(self.tfidf_vectorizer.transform([document])[0])
-            training_dict[document] = (cluster)
+        for document_pair in zip(self.training_corpus,self.kmeans.labels_):
+            cluster = document_pair[1]
+            training_dict[document_pair[0]] = (cluster)
         class_associations = self.pd.DataFrame.from_dict(training_dict, orient = "index", columns = ['labels'])
         class_associations = class_associations.rename_axis("articles").reset_index()
         return class_associations
@@ -134,6 +121,7 @@ class fileAnalysis:
     def bayes_model(self):
         
         split_set = self.prep_for_bayes()
+        self.cv = self.cv.fit(split_set["articles"])
         random_x = split_set.sample(frac = .5)
         random_y = split_set.sample(frac = .5)
         half = int(len(random_x)/2)
@@ -144,28 +132,32 @@ class fileAnalysis:
         train_y = random_y["labels"][:half] 
         test_y =  random_y["labels"][half:] 
         
-        train_x_counts = self.cv.fit_transform(train_x)
+        train_x_counts = self.cv.transform(train_x)
         self.mnb = self.mnb.fit(train_x_counts,train_y)
         
-        self.test_x_counts = self.cv.fit_transform(test_x)
+        self.test_x_counts = self.cv.transform(test_x)
         predicted_x = self.mnb.predict(self.test_x_counts)
         score = self.metrics.accuracy_score(test_y,predicted_x)
         print(score)
 
     def bayes_classify(self, sentence_token):
-        predict_array = self.cv.fit_transform(sentence_token)
+        predict_array = self.cv.transform(sentence_token)
         return self.mnb.predict(predict_array)
 
 
 
-"""
+
+from fileProcessing import fileProcess
+
+file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
 root_FC = r"D:\SeniorProject\FakeCorGaz"
 target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
-fp_FC = fileProcess(root_FC,target_FC, "FakeCorGaz")
-fp_FC.walkAndProcess()
+fp_FC = fileProcess(root_FC,target_FC, sample_size=10, news_paper= "FakeCorGaz",isCorpusBuilt = True)
+fa_FC = fileAnalysis(max_clusters=10,train_corpus=fp_FC.corpus,isKBuilt=True)
 
-fa_FC = fileAnalysis(fp_FC, 2, 10,isCorpusBuilt = False, isKBuilt = False)
-"""
+df = fa_FC.generateDF(fp_FC.df)
+
+
 
 
 
