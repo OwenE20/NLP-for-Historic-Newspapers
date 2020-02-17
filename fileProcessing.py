@@ -118,7 +118,6 @@ class fileProcess:
 
                    else:
                        if(word in self.spell.unknown([word])):
-                           print(word)
                            corrected = "n"
                        else:
                            corrected = word

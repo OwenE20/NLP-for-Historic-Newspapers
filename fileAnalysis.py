@@ -8,7 +8,7 @@ class fileAnalysis:
     import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.decomposition import TruncatedSVD
-    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.naive_bayes import MultinomialNB, BernoulliNB, CategoricalNB, ComplementNB
     from sklearn.feature_extraction.text import CountVectorizer
     from sklearn.model_selection import train_test_split
     import os
@@ -21,7 +21,7 @@ class fileAnalysis:
     ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
     """
     
-    def __init__(self,max_clusters, train_corpus, isKBuilt = False):
+    def __init__(self,max_clusters, train_corpus, isKBuilt = False, isBayesBuilt = False):
 
 
         
@@ -31,7 +31,7 @@ class fileAnalysis:
         self.kmeans_model(max_clusters,isKBuilt)
         self.true_clusters = self.kmeans.n_clusters
         self.cv = self.CountVectorizer()
-        self.bayes_model()
+        self.bayes_classifier = self.bayes_model(isBayesBuilt)
 
 
     """
@@ -118,31 +118,52 @@ class fileAnalysis:
         return class_associations
         
   
-    def bayes_model(self):
-        
-        split_set = self.prep_for_bayes()
-        self.cv = self.cv.fit(split_set["articles"])
-        random_x = split_set.sample(frac = .5)
-        random_y = split_set.sample(frac = .5)
-        half = int(len(random_x)/2)
-        
-        train_x = random_x["articles"][:half] 
-        test_x = random_x["articles"][half:]
-        
-        train_y = random_y["labels"][:half] 
-        test_y =  random_y["labels"][half:] 
-        
-        train_x_counts = self.cv.transform(train_x)
-        self.mnb = self.mnb.fit(train_x_counts,train_y)
-        
-        self.test_x_counts = self.cv.transform(test_x)
-        predicted_x = self.mnb.predict(self.test_x_counts)
-        score = self.metrics.accuracy_score(test_y,predicted_x)
-        print(score)
+    def bayes_model(self,built):
 
+        bayes_filepath = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\bayes_model.pickle"
+
+        if(built == False):
+            split_set = self.prep_for_bayes()
+            self.cv = self.cv.fit(split_set["articles"])
+            random_x = split_set.sample(frac = .5)
+            random_y = split_set.sample(frac = .5)
+            half = int(len(random_x)/2)
+
+            train_x = random_x["articles"][:half]
+            test_x = random_x["articles"][half:]
+
+            train_y = random_y["labels"][:half]
+            test_y =  random_y["labels"][half:]
+
+            train_x_counts = self.cv.transform(train_x)
+            test_x_counts = self.cv.transform(test_x)
+
+            model_set = [self.MultinomialNB, self.BernoulliNB, self.ComplementNB]
+            
+            for model in model_set:
+                cur_model = model()
+                cur_model = cur_model.fit(train_x_counts, train_y)
+                predicted_x = cur_model.predict(test_x_counts)
+                score = self.metrics.accuracy_score(test_y, predicted_x)
+                print(cur_model, score)
+
+            self.selectedModel = model_set[int(input("0 for MNB, 1 for Bernoulli, 2 for Comp"))]()
+            self.selectedModel = self.selectedModel.fit(train_x_counts, train_y)
+
+            with open(bayes_filepath,'wb') as file:
+                print("---- BUILDING BAYES MODEL ----")
+                self.pickle.dump(self.selectedModel,file)
+                file.close()
+        else:
+            with open(bayes_filepath, "rb") as file:
+                print("----LOADING BAYES MODEL---")
+                self.selectedModel = self.pickle.load(file)
+                file.close()
+
+            
     def bayes_classify(self, sentence_token):
         predict_array = self.cv.transform(sentence_token)
-        return self.mnb.predict(predict_array)
+        return self.selectedModel.predict(predict_array)
 
 
     
@@ -169,9 +190,8 @@ from fileProcessing import fileProcess
 file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
 root_FC = r"D:\SeniorProject\FakeCorGaz"
 target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
-fp_FC = fileProcess(root_FC,target_FC, sample_size=10, news_paper= "FakeCorGaz",isCorpusBuilt = True)
-fa_FC = fileAnalysis(max_clusters=10,train_corpus=fp_FC.corpus,isKBuilt=True)
-
+fp_FC = fileProcess(root_FC,target_FC, sample_size=30, news_paper= "FakeCorGaz",isCorpusBuilt = True)
+fa_FC = fileAnalysis(max_clusters=10,train_corpus=fp_FC.corpus,isKBuilt=True,isBayesBuilt=False)
 df = fa_FC.generateDF(fp_FC.df)
 
 
