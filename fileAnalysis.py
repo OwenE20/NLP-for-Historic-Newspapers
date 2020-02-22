@@ -21,17 +21,17 @@ class fileAnalysis:
     ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
     """
     
-    def __init__(self,max_clusters, train_corpus, isKBuilt = False, isBayesBuilt = False):
+    def __init__(self,max_clusters, train_corpus, isKBuilt, isBayesBuilt):
 
 
         
         self.training_corpus = train_corpus
         self.tfidfVec()
-        self.mnb = self.MultinomialNB()
         self.kmeans_model(max_clusters,isKBuilt)
         self.true_clusters = self.kmeans.n_clusters
-        self.cv = self.CountVectorizer()
-        self.bayes_classifier = self.bayes_model(isBayesBuilt)
+        self.bayes_vectorizer = self.TfidfVectorizer()
+        self.bayes_model(isBayesBuilt)
+        
 
 
     """
@@ -59,10 +59,14 @@ class fileAnalysis:
         
         if(built == False):
         
-            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.train_sample) for i in range(1,clusters_range)]
-            score = [kmeans[i].fit(self.train_sample).score(self.score_sample) for i in range(len(kmeans))]
+            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.train_sample) for i in range(2,clusters_range)]
+            
+            silhouette_scores = [self.metrics.silhouette_score(self.score_sample,kmeans[i].fit(self.score_sample).labels_, metric = "euclidean") for i in range(0,len(kmeans))]
         
-            self.plt.plot(range(1,clusters_range), score)
+            inertias = [kmeans[i].inertia_ for i in range(len(kmeans))]
+            
+        
+            self.plt.plot(range(2,clusters_range), silhouette_scores)
             self.plt.xlabel('Number of Clusters')
             self.plt.ylabel('Score')
             self.plt.title('Elbow Method')
@@ -76,7 +80,7 @@ class fileAnalysis:
                 print("---- BUILDING KMEANS MODEL ----")
                 self.pickle.dump(self.kmeans,file)
                 file.close()
-        else:
+        elif(built == True):
             with open(kmeans_file, "rb") as file:
                 print("----LOADING KMEANS MODEL---")
                 self.kmeans = self.pickle.load(file)
@@ -89,7 +93,7 @@ class fileAnalysis:
         terms = self.tfidf_vectorizer.get_feature_names()
         for i in range(self.true_clusters):
             print("Cluster %d:" % i),
-            for ind in order_centroids[i, :20]:
+            for ind in order_centroids[i, :30]:
                 print(' %s' % terms[ind]),
                 
     def getPCA(self):
@@ -122,9 +126,12 @@ class fileAnalysis:
 
         bayes_filepath = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\bayes_model.pickle"
 
+    
+        split_set = self.prep_for_bayes()
+        self.bayes_vectorizer = self.bayes_vectorizer.fit(split_set["articles"])
+
         if(built == False):
-            split_set = self.prep_for_bayes()
-            self.cv = self.cv.fit(split_set["articles"])
+            
             random_x = split_set.sample(frac = .5)
             random_y = split_set.sample(frac = .5)
             half = int(len(random_x)/2)
@@ -135,25 +142,35 @@ class fileAnalysis:
             train_y = random_y["labels"][:half]
             test_y =  random_y["labels"][half:]
 
-            train_x_counts = self.cv.transform(train_x)
-            test_x_counts = self.cv.transform(test_x)
+            train_x_counts = self.bayes_vectorizer.transform(train_x)
+            test_x_counts = self.bayes_vectorizer.transform(test_x)
 
             model_set = [self.MultinomialNB, self.BernoulliNB, self.ComplementNB]
             
             for model in model_set:
                 cur_model = model()
                 cur_model = cur_model.fit(train_x_counts, train_y)
-                predicted_x = cur_model.predict(test_x_counts)
-                score = self.metrics.accuracy_score(test_y, predicted_x)
+                predicted_y = cur_model.predict(test_x_counts)
+                print(type(predicted_y),type(test_y))
+                score = self.metrics.accuracy_score(test_y, predicted_y)
                 print(cur_model, score)
+                print(self.metrics.confusion_matrix(test_y,predicted_y))
+                print(self.metrics.classification_report(test_y,predicted_y,zero_division=1))
 
             self.selectedModel = model_set[int(input("0 for MNB, 1 for Bernoulli, 2 for Comp"))]()
             self.selectedModel = self.selectedModel.fit(train_x_counts, train_y)
+            predicted_y = self.selectedModel.predict(test_x_counts)
+            print(type(predicted_y),type(test_y))
+            score = self.metrics.accuracy_score(test_y, predicted_y)
+            print(cur_model, score)
+            print(self.metrics.confusion_matrix(test_y,predicted_y))
+            print(self.metrics.classification_report(test_y,predicted_y,zero_division=1))
 
             with open(bayes_filepath,'wb') as file:
                 print("---- BUILDING BAYES MODEL ----")
                 self.pickle.dump(self.selectedModel,file)
                 file.close()
+                print("model built")
         else:
             with open(bayes_filepath, "rb") as file:
                 print("----LOADING BAYES MODEL---")
@@ -162,7 +179,7 @@ class fileAnalysis:
 
             
     def bayes_classify(self, sentence_token):
-        predict_array = self.cv.transform(sentence_token)
+        predict_array = self.bayes_vectorizer.transform(sentence_token)
         return self.selectedModel.predict(predict_array)
 
 
@@ -184,17 +201,16 @@ class fileAnalysis:
     
            
 
-
+"""
 from fileProcessing import fileProcess
 
 file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
 root_FC = r"D:\SeniorProject\FakeCorGaz"
 target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
 fp_FC = fileProcess(root_FC,target_FC, sample_size=30, news_paper= "FakeCorGaz",isCorpusBuilt = True)
-fa_FC = fileAnalysis(max_clusters=10,train_corpus=fp_FC.corpus,isKBuilt=True,isBayesBuilt=False)
-df = fa_FC.generateDF(fp_FC.df)
+fa_FC = fileAnalysis(max_clusters=5,train_corpus=fp_FC.corpus,isKBuilt=False,isBayesBuilt=False)
 
-
+"""
 
 
 
