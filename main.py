@@ -101,19 +101,25 @@ def generateStopSet(corpus):
   #  file.close()
 
 from fileAnalysis import fileAnalysis
-model = fileAnalysis(max_clusters=20,train_corpus=Train_Corpus,isKBuilt = False,isBayesBuilt = False)
+model = fileAnalysis(max_clusters=10,train_corpus=Train_Corpus, stop_words = fp_Training.stopset, isKBuilt = False,isBayesBuilt = False)
 
 """
 Once model is built, get DF from both Corpora
 
 """
-#Cor_df = model.generateDF(Cor_Corpus)
-#RD_df = model.generateDF(RD_Corpus)
+Cor_df = model.generateDF(Cor_Corpus)
+RD_df = model.generateDF(RD_Corpus)
 
 """
 Once dfs are built, collect statistics
+ALSO, GET A VIGNETTE
 
 """
+"""
+import pandas as pd
+for column, series in Cor_df[2:].iteritems():
+    Cor_df[column] = Cor_df[column]/Cor_df["num_articles"]
+for column, series in RD_df[2:].iteritems():
+    RD_df[column] = RD_df[column]/RD_df["num_articles"]
 
-
-
+"""

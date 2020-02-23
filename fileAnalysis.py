@@ -21,16 +21,17 @@ class fileAnalysis:
     ALSO AFTER EVERYTHING IS WORKING, PICKLE PARAMETERS FOR MODELS, CORPUS, etc.
     """
     
-    def __init__(self,max_clusters, train_corpus, isKBuilt, isBayesBuilt):
+    def __init__(self,max_clusters, train_corpus, stop_words, isKBuilt, isBayesBuilt):
 
 
-        
+        self.stop = stop_words
         self.training_corpus = train_corpus
         self.tfidfVec()
         self.kmeans_model(max_clusters,isKBuilt)
         self.true_clusters = self.kmeans.n_clusters
         self.bayes_vectorizer = self.TfidfVectorizer()
         self.bayes_model(isBayesBuilt)
+        
         
 
 
@@ -41,9 +42,9 @@ class fileAnalysis:
     """
     
     def tfidfVec(self):
-        self.tfidf_vectorizer = self.TfidfVectorizer().fit(self.training_corpus)
+        self.tfidf_vectorizer = self.TfidfVectorizer(min_df=.1, max_df=.7,max_features = 100000, sublinear_tf=True,binary=False,ngram_range=(1,3), smooth_idf = False, stop_words = self.stop).fit(self.training_corpus)
         self.tfidf = self.tfidf_vectorizer.transform(self.training_corpus)
-        size = len(self.tfidf.toarray()//2)
+        size = len(self.tfidf.toarray())//2
         self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
         self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
 
@@ -59,17 +60,17 @@ class fileAnalysis:
         
         if(built == False):
         
-            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.train_sample) for i in range(2,clusters_range)]
+            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.tfidf) for i in range(2,clusters_range)]
             
-            silhouette_scores = [self.metrics.silhouette_score(self.score_sample,kmeans[i].fit(self.score_sample).labels_, metric = "euclidean") for i in range(0,len(kmeans))]
+            silhouette_scores = [self.metrics.silhouette_score(self.tfidf,kmeans[i].fit(self.tfidf).labels_) for i in range(0,len(kmeans))]
         
             inertias = [kmeans[i].inertia_ for i in range(len(kmeans))]
             
         
             self.plt.plot(range(2,clusters_range), silhouette_scores)
             self.plt.xlabel('Number of Clusters')
-            self.plt.ylabel('Score')
-            self.plt.title('Elbow Method')
+            self.plt.ylabel('Silhouette Scores')
+            self.plt.title('Elbow Graph')
             self.plt.show()
             self.true_clusters = int(input("elbow point"))
             self.kmeans = self.KMeans(n_clusters = self.true_clusters, algorithm = "full",random_state = 0, init = 'random').fit(self.tfidf)
@@ -128,7 +129,7 @@ class fileAnalysis:
 
     
         split_set = self.prep_for_bayes()
-        self.bayes_vectorizer = self.bayes_vectorizer.fit(split_set["articles"])
+        self.bayes_vectorizer = self.tfidf_vectorizer
 
         if(built == False):
             
@@ -196,21 +197,7 @@ class fileAnalysis:
                         frequency += 1
                 frequencies.append(frequency)
             generated_df["clusters" + str(cluster)] = self.pd.Series(data = frequencies, index = generated_df.index)
-
+            print("cluster assigned")
         return generated_df
     
            
-
-"""
-from fileProcessing import fileProcess
-
-file = "D:\SeniorProject\FakeCorGazReorganized\FakeCorGaz18990901.xml"
-root_FC = r"D:\SeniorProject\FakeCorGaz"
-target_FC = r"D:\SeniorProject\FakeCorGazReorganized"
-fp_FC = fileProcess(root_FC,target_FC, sample_size=30, news_paper= "FakeCorGaz",isCorpusBuilt = True)
-fa_FC = fileAnalysis(max_clusters=5,train_corpus=fp_FC.corpus,isKBuilt=False,isBayesBuilt=False)
-
-"""
-
-
-
