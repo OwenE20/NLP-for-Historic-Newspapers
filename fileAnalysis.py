@@ -7,7 +7,7 @@ class fileAnalysis:
     from sklearn.cluster import KMeans
     import matplotlib.pyplot as plt
     import numpy as np
-    from sklearn.decomposition import TruncatedSVD
+    from sklearn.decomposition import TruncatedSVD, PCA
     from sklearn.naive_bayes import MultinomialNB, BernoulliNB, CategoricalNB, ComplementNB
     from sklearn.feature_extraction.text import CountVectorizer
     from sklearn.model_selection import train_test_split
@@ -26,11 +26,21 @@ class fileAnalysis:
 
         self.stop = stop_words
         self.training_corpus = train_corpus
-        self.tfidfVec()
+
+        self.tfidf_vectorizer = self.TfidfVectorizer(min_df=.05, max_df=.7, sublinear_tf=True,
+                                                     binary=False, ngram_range=(1, 3), smooth_idf=False,
+                                                     stop_words=self.stop, norm="l1").fit(self.training_corpus)
+
+        self.tfidf = self.tfidfVec(train_corpus)
+
+        self.lsa_vectorizer = self.TruncatedSVD(n_components=100).fit(self.tfidf)
+        self.lsa_dense = self.lsa(self.tfidf)
+
         self.kmeans_model(max_clusters,isKBuilt)
         self.true_clusters = self.kmeans.n_clusters
-        self.bayes_vectorizer = self.TfidfVectorizer()
-        self.bayes_model(isBayesBuilt)
+
+        #self.bayes_vectorizer = self.TfidfVectorizer()
+        #self.bayes_model(isBayesBuilt)
         
         
 
@@ -41,32 +51,23 @@ class fileAnalysis:
     RANDOMIZE ARTICLE SELECTION IN ACTUAL RUNTHROUGH
     """
     
-    def tfidfVec(self):
-        self.tfidf_vectorizer = self.TfidfVectorizer(min_df=.1, max_df=.7,max_features = 100000, sublinear_tf=True,binary=False,ngram_range=(1,3), smooth_idf = False, stop_words = self.stop).fit(self.training_corpus)
-        self.tfidf = self.tfidf_vectorizer.transform(self.training_corpus)
-        size = len(self.tfidf.toarray())//2
-        self.score_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
-        self.train_sample = self.tfidf_vectorizer.fit_transform(self.random.sample(self.training_corpus, size))
+    def tfidfVec(self, corpus):
+        return self.tfidf_vectorizer.fit_transform(corpus)
 
-        self.tf_array = self.tfidf.toarray()
-
-        
+    def lsa(self, tfidf_array):
+        return self.lsa_vectorizer.transform(tfidf_array)
 
    
     def kmeans_model(self, clusters_range, built = False):
-        
-        
+
         kmeans_file = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\kmeans_model.pickle"
         
         if(built == False):
         
-            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.tfidf) for i in range(2,clusters_range)]
+            kmeans = [self.KMeans(n_clusters = i, algorithm = "full").fit(self.lsa_dense) for i in range(2,clusters_range)]
             
-            silhouette_scores = [self.metrics.silhouette_score(self.tfidf,kmeans[i].fit(self.tfidf).labels_) for i in range(0,len(kmeans))]
-        
-            inertias = [kmeans[i].inertia_ for i in range(len(kmeans))]
-            
-        
+            silhouette_scores = [self.metrics.silhouette_score(self.lsa_dense,kmeans[i].fit(self.lsa_dense).labels_) for i in range(0,len(kmeans))]
+
             self.plt.plot(range(2,clusters_range), silhouette_scores)
             self.plt.xlabel('Number of Clusters')
             self.plt.ylabel('Silhouette Scores')
@@ -74,7 +75,7 @@ class fileAnalysis:
             self.plt.show()
             self.true_clusters = int(input("elbow point"))
             self.kmeans = self.KMeans(n_clusters = self.true_clusters, algorithm = "full",random_state = 0, init = 'random').fit(self.tfidf)
-            self.getDescriptors()
+            #self.getDescriptors()
             self.getPCA()
             
             with open(kmeans_file,'wb') as file:
@@ -94,16 +95,16 @@ class fileAnalysis:
         terms = self.tfidf_vectorizer.get_feature_names()
         for i in range(self.true_clusters):
             print("Cluster %d:" % i),
-            for ind in order_centroids[i, :30]:
+            for ind in order_centroids[i, :10]:
                 print(' %s' % terms[ind]),
                 
     def getPCA(self):
-        svd = self.TruncatedSVD()
-        svd_points = svd.fit_transform(self.tfidf.toarray())
-        fitted = self.kmeans.fit(svd_points)
-        prediction = self.kmeans.predict(svd_points)
+        pca = self.PCA()
+        pca_points = pca.fit_transform(self.lsa_dense)
+        fitted = self.kmeans.fit(pca_points)
+        prediction = self.kmeans.predict(pca_points)
         
-        self.plt.scatter(svd_points[:, 0], svd_points[:, 1], c=prediction, s=50, cmap='viridis')
+        self.plt.scatter(pca_points[:, 0], pca_points[:, 1], c=prediction, s=50, cmap='viridis')
         centers = fitted.cluster_centers_
         self.plt.scatter(centers[:, 0], centers[:, 1],c='black', s=300, alpha=0.6);
         self.plt.show()
@@ -180,8 +181,12 @@ class fileAnalysis:
 
             
     def bayes_classify(self, sentence_token):
+        print(sentence_token)
         predict_array = self.bayes_vectorizer.transform(sentence_token)
-        return self.selectedModel.predict(predict_array)
+        predicted = self.selectedModel.predict(predict_array)
+        print("cluster: " + str(predicted))
+        print("------------------")
+        return predicted
 
 
     
@@ -197,7 +202,4 @@ class fileAnalysis:
                         frequency += 1
                 frequencies.append(frequency)
             generated_df["clusters" + str(cluster)] = self.pd.Series(data = frequencies, index = generated_df.index)
-            print("cluster assigned")
         return generated_df
-    
-           

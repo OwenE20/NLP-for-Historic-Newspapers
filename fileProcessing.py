@@ -13,7 +13,7 @@ class fileProcess:
     from symspellpy import SymSpell, Verbosity
     from bs4 import BeautifulSoup
     from nltk.corpus import stopwords
-    from nltk.stem import WordNetLemmatizer
+    from nltk.stem import PorterStemmer
     from spellchecker import SpellChecker
     import nltk
     import pandas as pd
@@ -21,14 +21,24 @@ class fileProcess:
 
     import random
 
-    def __init__(self, root_dir, target_dir, news_paper, sample_size, isCorpusBuilt=False):
+    def __init__(self, root_dir, target_dir, news_paper, sample_size, isFileSetup, isCorpusBuilt=False):
 
         symSpell_dictionary = r"C:\Users\Mikes_Surface2\Anaconda3\Lib\site-packages\symspellpy\frequency_dictionary_en_82_765.txt"
         stop_file = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers\stop.pickle"
-        
+
+        self.stemmer = self.PorterStemmer()
         self.spellchecker = self.SymSpell()
         self.spellchecker.load_dictionary(symSpell_dictionary, 0, 1)
         self.word_set = self.spellchecker._words.keys()
+        
+        self.root = root_dir
+        self.target = target_dir
+        self.paperName = news_paper
+        
+
+        if(isFileSetup == False):
+            print("walking")
+            self.walkAndProcess()
 
         try:
             with open(stop_file, 'rb') as file:
@@ -36,12 +46,8 @@ class fileProcess:
                 file.close()
         except EOFError:
             stop = set([])
-    
-        self.root = root_dir
-        self.target = target_dir
-        self.paperName = news_paper
+        
         self.stopset = set(self.stopwords.words("english")).union(stop)
-        self.lemmatizer = self.WordNetLemmatizer()
         self.spell = self.SpellChecker()
 
         corpus_filename = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers" + "\\" + news_paper + "\corpus" + ".pickle"
@@ -66,15 +72,16 @@ class fileProcess:
         # IF PERFORMANCE IS SUBPAR WITH SPELL CHECK, FIND ERA-SPECIFIC CORPUS TO GENERATE WORD FREQUENCIES
 
     def walkAndProcess(self):
-        dates = self.re.compile(r'\d{2,4}')
+        dates = self.re.compile(r'\d{1,4}')
         # regular expression to find dates within file path, looks for 2-4 digits
 
         for root, dirs, files in self.os.walk(self.root):
             if (len(files) > 1 and files != None):
                 date_list = dates.findall(self.os.path.join(root, files[1]))
                 print(date_list)
-                newPathName = date_list[0] + date_list[1] + date_list[2] + ".xml"
+                newPathName = date_list[0] + date_list[1] + date_list[2] + "_" + date_list[4] +  ".xml"
                 newRoot = self.target + "/" + self.paperName + newPathName
+
                 self.shutil.move(self.os.path.join(root, files[1]), newRoot)
 
     def parse_xml(self, filename):
@@ -112,24 +119,21 @@ class fileProcess:
             clean_string = ""
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
-                #print("THIS WORD IS BEING CHECKED" + word)
                 corrected = "n"
                 if (word.isalpha()):
                     if (word in self.spell.unknown([word])):
                         suggestions = self.spellchecker.lookup(word, self.Verbosity.CLOSEST, include_unknown=False)
                         if (len(suggestions) > 0):
                             corrected = suggestions[0].term.lower()
-                            #print("THIS IS BEING CORRECTED:" + corrected)
                     elif(len(self.spell.unknown([word])) == 0):
                         corrected = word.lower()
-                        #print("THIS WORD ISNT BEING CORRECTED:" + corrected)
-                if(corrected not in self.stopset and len(corrected) > 3):
-                    #print("THIS WORD IS BEING ADDED:" + corrected)
+                if(corrected not in self.stopset and len(corrected) > 2):
+                    corrected = self.stemmer.stem(corrected)
                     temp_list.append(corrected)
             if (len(temp_list) > 20):
-                print("cleaned a string")
                 clean_string = " ".join(temp_list)
                 list2.append(clean_string)
+    
         return list2
 
         # sample_size is how many files
@@ -154,12 +158,16 @@ class fileProcess:
         temp_dict = {}
         # takes a random sample of files
         random_files = self.random.sample(files, sample_size)
+        count = 1
         for file in random_files:
+            print("processing file: " + str(count))
+            count = count + 1
             text, date = self.parse_xml(file)
             temp_text = self.cleanList(text)
             temp_dict[str(date)] = [temp_text]
         df = self.pd.DataFrame.from_dict(temp_dict, orient='index')
-        df.index = self.pd.to_datetime(df.index)
+        print(df.index)
+        df.index = self.pd.to_datetime(df.index,errors = "coerce")
         return df
 
 """
