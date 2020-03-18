@@ -8,7 +8,7 @@ from sklearn.metrics import make_scorer,silhouette_score
 train_path = r"D:\SeniorProject\TrainingFiles"
 root = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers"
 
-fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 200,isCorpusBuilt=False)
+fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= ,isCorpusBuilt=False)
 
 pipeline = p.Pipeline([
     ('tfidf', TfidfVectorizer())

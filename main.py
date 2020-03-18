@@ -30,7 +30,7 @@ root = r"D:\SeniorProject\RawData\TrainingSNs"
 
 
 #sample size can be huge (any portion of total)
-fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 3000, isFileSetup = True, isCorpusBuilt=False)
+fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 3000, isFileSetup = True, isCorpusBuilt=True)
     
 #sample size can be 700
 #fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz",sample_size=700, isCorpusBuilt=False)
