@@ -30,18 +30,18 @@ root = r"D:\SeniorProject\RawData\TrainingSNs"
 
 
 #sample size can be huge (any portion of total)
-fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 3000, isFileSetup = True, isCorpusBuilt=True)
+fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 4400, isFileSetup = True, isCorpusBuilt=True)
     
 #sample size can be 700
-#fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz",sample_size=700, isCorpusBuilt=False)
+fp_Cor = fileProcess(root_Cor,target_Cor, "CorGaz",sample_size=700, isFileSetup = True, isCorpusBuilt=True)
 
 #sample size can be 1200
-#fp_RD = fileProcess(root_RD,target_RD, "RightsDem",sample_size=1200,isCorpusBuilt=False)
+fp_RD = fileProcess(root_RD,target_RD, "RightsDem",sample_size=1200,isFileSetup = True,isCorpusBuilt=True)
 
 
-#Cor_Corpus = fp_Cor.df
-#RD_Corpus = fp_RD.df
-#Train_Corpus = fp_RD.corpus
+Cor_Corpus = fp_Cor.df
+RD_Corpus = fp_RD.df
+Train_Corpus = fp_Training.corpus
 
 
 """
@@ -71,8 +71,8 @@ def generateStopSet(corpus):
 
 
 
-#from fileAnalysis import fileAnalysis
-#model = fileAnalysis(max_clusters=20,train_corpus=Train_Corpus, stop_words = fp_Training.stopset, isKBuilt = False,isBayesBuilt = False)
+from fileAnalysis import fileAnalysis
+model = fileAnalysis(max_clusters=10,train_corpus=Train_Corpus, stop_words = fp_Training.stopset, isKBuilt = False,isBayesBuilt = False)
 
 """
 Once model is built, get DF from both Corpora
@@ -137,8 +137,8 @@ def random_training_set():
 
     #FIVE PERCENT OF EACH WILL SERVE FOR TRAINING
 
-    five_percent_CD = .05 * len(os.listdir(target_Cor))
-    five_percent_RD = .05 * len(os.listdir(target_RD))
+    five_percent_CD = .1 * len(os.listdir(target_Cor))
+    five_percent_RD = .1 * len(os.listdir(target_RD))
 
     train_num = 0
     while(train_num < five_percent_CD):

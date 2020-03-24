@@ -4,24 +4,23 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import make_scorer,silhouette_score
+from sklearn.utils.extmath import randomized_svd
 
 train_path = r"D:\SeniorProject\TrainingFiles"
 root = r"D:\SeniorProject\ProjectScripts\NLP-for-Historic-Newspapers"
 
-fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= ,isCorpusBuilt=False)
+fp_Training = fileProcess(root,train_path,"TrainingFiles",sample_size= 4400, isFileSetup = True, isCorpusBuilt=True)
 
 pipeline = p.Pipeline([
     ('tfidf', TfidfVectorizer())
 ])
 
 parameters = {
-    'tfidf_max_df': (.35, .45,.5,.75,1.0),
-    'tfidf_min_df': (0,.02,.04,.06,.08),
-    'tfidf_ngram_range': [(1,3)],\
-    "tfidf_smooth_idf": (True,False),
-    "tfidf_sublinear_tf": (True,False),
-    "norm": ('l1','l2',None),
-    "max_features" : (1000,5000,10000,15000,20000),
+    'tfidf_max_df': (.75,1.0),
+    'tfidf_min_df': (0,.005,.01,.02,.04),
+    'tfidf_ngram_range': [(1,3)],
+    "norm": ('l1','l2'),
+    "max_features" : (15000,20000,25000),
     "binary": (True,False)
 }
 """
@@ -44,11 +43,9 @@ import itertools
 keys, values = zip(*parameters.items())
 experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 import random
-
 from sklearn.decomposition import TruncatedSVD
 import matplotlib.pyplot as plt
-svd = TruncatedSVD()
-for paramset in random.sample(experiments,k = 100):
+for paramset in random.sample(experiments,k = 50):
     print(paramset)
     plt.clf()
     vec = TfidfVectorizer(
@@ -56,8 +53,8 @@ for paramset in random.sample(experiments,k = 100):
                             min_df= paramset["tfidf_min_df"],
                             ngram_range= paramset["tfidf_ngram_range"],
                             use_idf= True,
-                            smooth_idf = paramset["tfidf_smooth_idf"],
-                            sublinear_tf= paramset["tfidf_sublinear_tf"],
+                            smooth_idf =True,
+                            sublinear_tf= True,
                             norm = paramset["norm"],
                             max_features = paramset["max_features"],
                             analyzer="word",
@@ -66,10 +63,14 @@ for paramset in random.sample(experiments,k = 100):
     )
     
     tfidf = vec.fit_transform(fp_Training.corpus)
+    
+   
     print("num of dimensions in raw: %d" % len(tfidf.toarray()[0]))
-    svd_points = svd.fit_transform(tfidf.toarray())
-    plt.title(str(paramset) + " " + str(len(tfidf.toarray()[0])))
-    plt.scatter(svd_points[:, 0], svd_points[:, 1], s=50, cmap='viridis')
+    kmeans = [KMeans(n_clusters = i, algorithm = "full",).fit(tfidf) for i in range(2,5)]
+
+    silhouette_scores = [silhouette_score(tfidf,kmeans[i].fit(tfidf).labels_) for i in range(0,len(kmeans))]
+    plt.title(str(paramset) + " ")
+    plt.plot(range(2,5), silhouette_scores)
     plt.show()
 
 

@@ -27,9 +27,8 @@ class fileAnalysis:
         self.stop = stop_words
         self.training_corpus = train_corpus
 
-        self.tfidf_vectorizer = self.TfidfVectorizer(min_df=.05, max_df=.7, sublinear_tf=True,
-                                                     binary=False, ngram_range=(1, 3), smooth_idf=False,
-                                                     stop_words=self.stop, norm="l1").fit(self.training_corpus)
+        self.tfidf_vectorizer = self.TfidfVectorizer( max_df=1.0, min_df=0, smooth_idf=True,sublinear_tf=True,norm="l2", binary=False,
+                                                     stop_words=self.stop, max_features = 250000).fit(self.training_corpus)
 
         self.tfidf = self.tfidfVec(train_corpus)
 
@@ -39,8 +38,9 @@ class fileAnalysis:
         self.kmeans_model(max_clusters,isKBuilt)
         self.true_clusters = self.kmeans.n_clusters
 
-        #self.bayes_vectorizer = self.TfidfVectorizer()
-        #self.bayes_model(isBayesBuilt)
+        
+        self.bayes_vectorizer = self.tfidf_vectorizer
+        self.bayes_model(isBayesBuilt)
         
         
 
@@ -91,12 +91,13 @@ class fileAnalysis:
 
     def getDescriptors(self):
         print("Top terms per cluster:")
-        order_centroids = self.kmeans.cluster_centers_.argsort()[:, ::-1]
+        order_centroids = self.lsa_vectorizer.inverse_transform(
+                           self.kmeans.cluster_centers_.argsort()[:, ::-1])
         terms = self.tfidf_vectorizer.get_feature_names()
         for i in range(self.true_clusters):
             print("Cluster %d:" % i),
             for ind in order_centroids[i, :10]:
-                print(' %s' % terms[ind]),
+                print(' %s' % terms[ind])
                 
     def getPCA(self):
         pca = self.PCA()
@@ -130,7 +131,6 @@ class fileAnalysis:
 
     
         split_set = self.prep_for_bayes()
-        self.bayes_vectorizer = self.tfidf_vectorizer
 
         if(built == False):
             
@@ -144,15 +144,15 @@ class fileAnalysis:
             train_y = random_y["labels"][:half]
             test_y =  random_y["labels"][half:]
 
-            train_x_counts = self.bayes_vectorizer.transform(train_x)
-            test_x_counts = self.bayes_vectorizer.transform(test_x)
+            train_x_features = self.lsa(self.bayes_vectorizer.transform(train_x)) ** 2
+            test_x_features = self.lsa(self.bayes_vectorizer.transform(test_x)) ** 2
 
             model_set = [self.MultinomialNB, self.BernoulliNB, self.ComplementNB]
             
             for model in model_set:
                 cur_model = model()
-                cur_model = cur_model.fit(train_x_counts, train_y)
-                predicted_y = cur_model.predict(test_x_counts)
+                cur_model = cur_model.fit(train_x_features, train_y)
+                predicted_y = cur_model.predict(test_x_features)
                 print(type(predicted_y),type(test_y))
                 score = self.metrics.accuracy_score(test_y, predicted_y)
                 print(cur_model, score)
@@ -160,8 +160,8 @@ class fileAnalysis:
                 print(self.metrics.classification_report(test_y,predicted_y,zero_division=1))
 
             self.selectedModel = model_set[int(input("0 for MNB, 1 for Bernoulli, 2 for Comp"))]()
-            self.selectedModel = self.selectedModel.fit(train_x_counts, train_y)
-            predicted_y = self.selectedModel.predict(test_x_counts)
+            self.selectedModel = self.selectedModel.fit(train_x_features, train_y)
+            predicted_y = self.selectedModel.predict(test_x_features)
             print(type(predicted_y),type(test_y))
             score = self.metrics.accuracy_score(test_y, predicted_y)
             print(cur_model, score)
@@ -181,11 +181,8 @@ class fileAnalysis:
 
             
     def bayes_classify(self, sentence_token):
-        print(sentence_token)
-        predict_array = self.bayes_vectorizer.transform(sentence_token)
+        predict_array = self.lsa(self.bayes_vectorizer.transform(sentence_token))
         predicted = self.selectedModel.predict(predict_array)
-        print("cluster: " + str(predicted))
-        print("------------------")
         return predicted
 
 

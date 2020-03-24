@@ -116,6 +116,7 @@ class fileProcess:
     def cleanList(self, list1):
         list2 = []
         for index, st in enumerate(list1):
+            print(len(st))
             clean_string = ""
             temp_list = []
             for word in self.nltk.tokenize.word_tokenize(st):
@@ -130,7 +131,7 @@ class fileProcess:
                 if(corrected not in self.stopset and len(corrected) > 2):
                     corrected = self.stemmer.stem(corrected)
                     temp_list.append(corrected)
-            if (len(temp_list) > 20):
+            if (len(temp_list) > 10):
                 clean_string = " ".join(temp_list)
                 list2.append(clean_string)
     
